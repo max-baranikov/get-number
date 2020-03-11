@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-04-app
+  labels:
+    name: node-04-app
+spec:
+  type: LoadBalancer
+  selector:
+    tier: app
+  ports:
+    - nodePort: 31111
+      port: 31111
+      targetPort: 80
+      name: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-04-app
+spec:
+  selector:
+    matchLabels:
+      tier: app
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 2
+  template:
+    metadata:
+      labels:
+        tier: app
+    spec:
+      containers:
+        - image: baranikov/kube:v0.1
+          name: app
+          imagePullPolicy: Always
+#          imagePullPolicy: Never
+          env:
+            - name: DATABASE
+              value: 'mysql'
+            - name: DATABASE_HOST
+              value: node-04-db
+            - name: DATABASE_PORT
+              value: '30000'
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-cred
+                  key: user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-cred
+                  key: password
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-cred
+                  key: database
+          ports:
+            - containerPort: 80
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "bin/console doctrine:database:create --if-not-exists && bin/console doctrine:migrations:migrate -n"]
+#          readinessProbe:
+#            httpGet:
+#              path: /api/numbers
+#              port: 80
+##              port: 31111
+#            initialDelaySeconds: 3
+#            periodSeconds: 3
+#            successThreshold: 1
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa
+spec:
+  maxReplicas: 10
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: node-04-app
+  targetCPUUtilizationPercentage: 50
+---

@@ -1,0 +1,7 @@
+commonLabels:
+  app: node-04
+namespace: ns-04
+resources:
+  - config.yml
+  - app.yml
+  - db.yml
