@@ -2,13 +2,13 @@ FROM whatwedo/symfony4:v2.1
 
 # Install tools
 RUN apk add --no-cache bash curl
+RUN chmod -R 775 /etc/service
 
 # Copy app code and install dependencies
 WORKDIR /var/www/
 USER nginx
 RUN git clone -b master --single-branch https://github.com/max-baranikov/get-number.git/ .
 RUN composer install --prefer-dist --no-scripts
-RUN chmod -R 775 /etc/service
 
 # Set default environment variables
 ENV APP_ENV=prod
